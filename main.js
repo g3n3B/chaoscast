@@ -16,19 +16,19 @@ const STARTER_POOL = [
 ];
 
 const CLASS_COLORS = {
-  Pyre: 0xcc3300,
-  Veil: 0x7700cc,
-  Fae:  0xcc0066,
-  Rot:  0x336600,
-  Chaos:0xcc6600,
-  Void: 0x0044cc,
+  Pyre:  0xcc3300,
+  Veil:  0x7700cc,
+  Fae:   0xcc0066,
+  Rot:   0x336600,
+  Chaos: 0xcc6600,
+  Void:  0x0044cc,
 };
 
 const dice = [];
 
 STARTER_POOL.forEach((data, i) => {
-  const x = 80 + i * 120;
-  const y = 260;
+  const x = 71 + i * 120;
+  const y = 220;
   const die = createDie(x, y, data);
   dice.push(die);
 });
@@ -39,7 +39,7 @@ function createDie(x, y, data) {
     class: data.class,
     keyword: data.keyword,
     faces: [1, 2, 3, 4, 5, 6],
-    blanked: [1, 2, 3], // Ash rarity — 3 blanks
+    blanked: [1, 2, 3],
     currentFace: null,
     container: new PIXI.Container(),
     graphics: new PIXI.Graphics(),
