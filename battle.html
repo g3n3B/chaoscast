@@ -2,15 +2,46 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>CHAOS//CAST</title>
+  <title>CHAOS//CAST — Battle</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0a0a0a; display: flex; justify-content: center; align-items: center; height: 100vh; }
+
+    body {
+      background: #0a0a0a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #back {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 14px;
+      color: #cc0000;
+      text-decoration: none;
+      letter-spacing: 3px;
+      border: 1px solid #cc0000;
+      padding: 6px 14px;
+    }
+
+    #back:hover {
+      background: #cc0000;
+      color: #0a0a0a;
+    }
+
     canvas { display: block; }
   </style>
 </head>
 <body>
+
+  <a id="back" href="index.html">← BACK</a>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
   <script src="main.js"></script>
+
 </body>
 </html>
