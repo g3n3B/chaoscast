@@ -72,7 +72,7 @@ function createDie(x, y, data) {
 
   die.keywordLabel.anchor.set(0.5, 0);
   die.keywordLabel.x = 32;
-  die.keywordLabel.y = 86;
+  die.keywordLabel.y = 96;
 
   die.container.addChild(die.graphics);
   die.container.addChild(die.valueLabel);
@@ -128,3 +128,25 @@ function rollDie(die) {
     }
   }, 60);
 }
+
+// Roll All button
+const rollAllBtn = new PIXI.Graphics();
+rollAllBtn.lineStyle(2, 0xcc0000, 1);
+rollAllBtn.beginFill(0x0a0a0a);
+rollAllBtn.drawRect(0, 0, 160, 40);
+rollAllBtn.endFill();
+rollAllBtn.x = 320;
+rollAllBtn.y = 360;
+rollAllBtn.interactive = true;
+rollAllBtn.buttonMode = true;
+rollAllBtn.on('pointerdown', () => dice.forEach(d => rollDie(d)));
+
+const rollAllLabel = new PIXI.Text('ROLL ALL', {
+  fontFamily: 'monospace', fontSize: 14, fill: 0xcc0000, letterSpacing: 4,
+});
+rollAllLabel.anchor.set(0.5);
+rollAllLabel.x = 80;
+rollAllLabel.y = 20;
+
+rollAllBtn.addChild(rollAllLabel);
+app.stage.addChild(rollAllBtn);
