@@ -150,3 +150,21 @@ rollAllLabel.y = 20;
 
 rollAllBtn.addChild(rollAllLabel);
 app.stage.addChild(rollAllBtn);
+
+// Player HP
+let playerHP = 20;
+
+const hpLabel = new PIXI.Text('HP: 20', {
+  fontFamily: 'monospace',
+  fontSize: 16,
+  fill: 0xcc0000,
+  letterSpacing: 3,
+});
+hpLabel.x = 360;
+hpLabel.y = 160;
+app.stage.addChild(hpLabel);
+
+function updateHP(amount) {
+  playerHP = Math.max(0, playerHP + amount);
+  hpLabel.text = 'HP: ' + playerHP;
+}
