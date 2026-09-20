@@ -17,7 +17,7 @@ function H() { return app.renderer.height; }
 
 const BOARD_SLOTS   = 4;
 const POUCH_SIZE    = 18;
-const STARTING_HP   = 20;
+const STARTING_HP   = 35;
 const MAX_REROLLS   = 2;
 
 const CLASS_COLORS = {
@@ -104,15 +104,14 @@ function dieSpacing() { return Math.floor(W() / (BOARD_SLOTS + 1)); }
 
 // Y zones — AI top, player bottom, buttons in middle
 function aiDiceY()     { return Math.floor(H() * 0.04); }
-function playerDiceY() { return Math.floor(H() * 0.58); }
+function playerDiceY() { return Math.floor(H() * 0.68); }
 
-// Buttons centered in middle band
-function buttonY()     { return Math.floor(H() * 0.46); }
-function endTurnY()    { return Math.floor(H() * 0.80); }
+// Buttons — only END TURN remains
+function endTurnY()    { return Math.floor(H() * 0.88); }
 
-// HP circles — enemy top center, player bottom center
-function enemyHPCircleY()  { return Math.floor(H() * 0.26); }
-function playerHPCircleY() { return Math.floor(H() * 0.72); }
+// HP circles — enemy sits below enemy dice, player sits above player dice
+function enemyHPCircleY()  { return Math.floor(H() * 0.30); }
+function playerHPCircleY() { return Math.floor(H() * 0.56); }
 
 // Info labels bottom
 function pouchY()      { return Math.floor(H() * 0.96); }
@@ -157,8 +156,8 @@ function buildUI() {
   // Divider line
   const divider = new PIXI.Graphics();
   divider.lineStyle(1, 0x1a1a1a, 1);
-  divider.moveTo(0, H() * 0.44);
-  divider.lineTo(W(), H() * 0.44);
+  divider.moveTo(0, H() * 0.50);
+  divider.lineTo(W(), H() * 0.50);
   uiLayer.addChild(divider);
 
   // Zone labels
@@ -175,14 +174,6 @@ function buildUI() {
   // HP circles — center of board
   buildHPDisplay();
 
-  // Reroll count — below buttons, centered
-  const rerollLabel = makeText('Rerolls left: ' + state.rerollsLeft, Math.max(10, Math.floor(W() * 0.010)), 0x555555);
-  rerollLabel.anchor.set(0.5, 0);
-  rerollLabel.x = W() / 2;
-  rerollLabel.y = buttonY() + btnH() + 6;
-  uiLayer.addChild(rerollLabel);
-  uiRefs.rerollLabel = rerollLabel;
-
   // Pouch label — bottom right
   const pouchLabel = makeText('POUCH: ' + state.player.pouch.length + ' remaining', Math.max(10, Math.floor(W() * 0.009)), 0x444444);
   pouchLabel.anchor.set(1, 0);
@@ -191,27 +182,7 @@ function buildUI() {
   uiLayer.addChild(pouchLabel);
   uiRefs.pouchLabel = pouchLabel;
 
-  // Buttons — evenly centered
-  const gap  = Math.floor(W() * 0.02);
-  const bx   = buttonsStartX();
-
-  buildButton('ROLL ALL', bx, buttonY(), () => {
-    if (state.phase === 'ROLL' && state.turn === 'PLAYER') phaseRoll();
-  });
-  buildButton('REROLL', bx + btnW() + gap, buttonY(), () => {
-    if (state.phase === 'REROLL' && state.turn === 'PLAYER' && state.rerollsLeft > 0) phaseReroll();
-  });
-  buildButton('DONE', bx + (btnW() + gap) * 2, buttonY(), () => {
-    if (state.phase === 'REROLL' && state.turn === 'PLAYER') {
-      state.phase = 'ACTION';
-      unlockAllPlayerDice();
-      setPhaseLabel('ACTION — click your dice to deal damage');
-      log('Click a die to send its value as damage. Hit END TURN when done.');
-      renderBoard();
-    }
-  });
-
-  // END TURN — centered, bigger, well below dice
+  // END TURN — centered
   const etW = Math.floor(btnW() * 1.3);
   buildButton('END TURN', (W() - etW) / 2, endTurnY(), () => {
     if (state.phase === 'ACTION' && state.turn === 'PLAYER') phaseResolve();
@@ -318,7 +289,8 @@ function refreshRerollLabel() {
 // ============================================================
 
 function buildDie(template) {
-  const allFaces    = [1, 2, 3, 4, 5, 6];
+  // Faces weighted toward chip damage — mostly 1-2, occasional 3, rare 4
+  const allFaces    = [1, 1, 2, 2, 3, 4];
   const startBlanks = RARITY_BLANKS[template.rarity] ?? 3;
   const blanked     = [];
   const facesCopy   = [...allFaces];
@@ -507,12 +479,11 @@ function fullRedraw() {
   refreshRerollLabel();
 
   const phaseTexts = {
-    ROLL:    'YOUR TURN — hit ROLL ALL to begin',
-    REROLL:  'REROLL — click dice to lock, then REROLL or DONE',
-    ACTION:  'ACTION — click your dice to deal damage',
+    ROLL:    'ROLLING...',
+    ACTION:  'ACTION — click your dice to act',
     RESOLVE: 'RESOLVING...',
     OVER:    state.winner === 'PLAYER' ? 'VICTORY' : 'DEFEATED',
-    START:   'YOUR TURN — hit ROLL ALL to begin',
+    START:   'ROLLING...',
   };
   setPhaseLabel(phaseTexts[state.phase] || '');
 }
@@ -542,9 +513,7 @@ function applyFrenzied(die, target) {
 // ============================================================
 
 function phaseRoll() {
-  if (state.turn !== 'PLAYER') return;
-  state.phase       = 'ROLL';
-  state.rerollsLeft = MAX_REROLLS;
+  state.phase = 'ROLL';
   setPhaseLabel('ROLLING...');
   log('Rolling your dice...');
 
@@ -554,28 +523,17 @@ function phaseRoll() {
     if (++ticks >= 14) {
       clearInterval(interval);
 
+      // Frenzied triggers immediately on roll
       state.player.board.forEach(d => {
         if (d && !d.isDead() && d.keyword === 'Frenzied' && d.currentFace && !d.blanked.includes(d.currentFace)) {
           applyFrenzied(d, 'AI');
-          d.locked = true;
         }
       });
 
-      state.phase = 'REROLL';
-      setPhaseLabel('REROLL — click dice to lock, then REROLL or DONE');
-      log('Lock dice you want to keep. Unlocked dice will reroll.');
-      refreshRerollLabel();
-
-      // Attach lock listeners — do NOT call renderBoard here
-      state.player.board.forEach(die => {
-        if (!die || die.isDead() || !die.container) return;
-        die.container.removeAllListeners('pointerdown');
-        die.container.on('pointerdown', () => {
-          if (state.phase !== 'REROLL') return;
-          die.locked = !die.locked;
-          drawDieGraphic(die);
-        });
-      });
+      state.phase = 'ACTION';
+      setPhaseLabel('ACTION — click your dice to act');
+      log('Click your dice to use them. Hit END TURN when done.');
+      renderBoard();
     }
   }, 60);
 }
@@ -832,12 +790,11 @@ function aiAct() {
   setTimeout(() => {
     cleanBoard('ai');
     if (checkWin()) return;
-    state.turn        = 'PLAYER';
-    state.phase       = 'ROLL';
-    state.rerollsLeft = MAX_REROLLS;
-    setPhaseLabel('YOUR TURN — hit ROLL ALL to begin');
+    state.turn  = 'PLAYER';
+    state.phase = 'ROLL';
     log('Your turn.');
     renderBoard();
+    setTimeout(() => phaseRoll(), 400);
   }, 800);
 }
 
@@ -875,8 +832,8 @@ function initGame() {
   state.turn  = 'PLAYER';
 
   fullRedraw();
-  setPhaseLabel('YOUR TURN — hit ROLL ALL to begin');
-  log('Match started. Roll your dice.');
+  log('Match started.');
+  setTimeout(() => phaseRoll(), 400);
 }
 
 initGame();
