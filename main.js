@@ -1,17 +1,6 @@
 // ============================================================
 // CHAOS//CAST — main.js v2
 // Black Fire Games | Gene (BlackFireGG)
-//
-// v2 CHANGES:
-// - Fully responsive canvas — fills the window at any size
-// - All positions calculated as percentages of canvas size
-// - Window resize listener redraws everything automatically
-// - Works on laptop, monitor, snapped window, any screen
-// ============================================================
-
-
-// ============================================================
-// PIXI APP — starts at window size, resizes on window change
 // ============================================================
 
 const app = new PIXI.Application({
@@ -19,18 +8,12 @@ const app = new PIXI.Application({
   height:          window.innerHeight,
   backgroundColor: 0x0a0a0a,
   antialias:       false,
-  resizeTo:        window, // PixiJS auto-resizes canvas to window
+  resizeTo:        window,
 });
 document.body.appendChild(app.view);
 
-// Shorthand — always use these instead of hardcoded numbers
 function W() { return app.renderer.width;  }
 function H() { return app.renderer.height; }
-
-
-// ============================================================
-// CONSTANTS
-// ============================================================
 
 const BOARD_SLOTS   = 4;
 const POUCH_SIZE    = 18;
@@ -62,11 +45,6 @@ const RARITY_COLORS = {
   Unbound:  0xff2200,
 };
 
-
-// ============================================================
-// DIE POOL
-// ============================================================
-
 const DIE_POOL = [
   { name: 'Ashbound Brute', class: 'Pyre',  keyword: 'Frenzied', rarity: 'Ash',      type: 'Bound' },
   { name: 'Cinder Ward',    class: 'Pyre',  keyword: 'Anchor',   rarity: 'Ash',      type: 'Bound' },
@@ -77,7 +55,7 @@ const DIE_POOL = [
   { name: 'Ember Striker',  class: 'Pyre',  keyword: 'Piercing', rarity: 'Marked',   type: 'Bound' },
   { name: 'Veil Dancer',    class: 'Veil',  keyword: 'Echo',     rarity: 'Marked',   type: 'Bound' },
   { name: 'Bone Shaper',    class: 'Rot',   keyword: 'Decay',    rarity: 'Marked',   type: 'Bound' },
-  { name: 'Thorn Leech',    class: 'Fae',   keyword: 'Bleed',    rarity: 'Marked',   type: 'Bound' },
+  { name: 'Thorn Leech',    class: 'Fae',   keyword: 'Leech',    rarity: 'Marked',   type: 'Bound' },
   { name: 'Null Shield',    class: 'Void',  keyword: 'Ward',     rarity: 'Marked',   type: 'Bound' },
   { name: 'Riot Dice',      class: 'Chaos', keyword: 'Frenzied', rarity: 'Marked',   type: 'Bound' },
   { name: 'Pyre Ascendant', class: 'Pyre',  keyword: 'Ascended', rarity: 'Cursed',   type: 'Bound' },
@@ -88,11 +66,6 @@ const DIE_POOL = [
   { name: 'The Unraveling', class: 'Chaos', keyword: 'Frenzied', rarity: 'Unbound',  type: 'Bound' },
 ];
 
-
-// ============================================================
-// GAME STATE
-// ============================================================
-
 const state = {
   phase:       'START',
   turn:        'PLAYER',
@@ -101,11 +74,6 @@ const state = {
   player: { hp: STARTING_HP, pouch: [], board: [], lockedDice: [] },
   ai:     { hp: STARTING_HP, pouch: [], board: [], lockedDice: [] },
 };
-
-
-// ============================================================
-// PIXI LAYERS
-// ============================================================
 
 const aiLayer      = new PIXI.Container();
 const playerLayer  = new PIXI.Container();
@@ -117,11 +85,6 @@ app.stage.addChild(playerLayer);
 app.stage.addChild(uiLayer);
 app.stage.addChild(overlayLayer);
 
-
-// ============================================================
-// TEXT HELPER
-// ============================================================
-
 function makeText(str, size, color) {
   return new PIXI.Text(str, {
     fontFamily: 'Share Tech Mono, monospace',
@@ -130,117 +93,114 @@ function makeText(str, size, color) {
   });
 }
 
-
 // ============================================================
-// LAYOUT HELPERS — all positions relative to W() and H()
+// LAYOUT HELPERS
 // ============================================================
 
-// Die card size scales with screen width
-function dieW() { return Math.floor(W() * 0.10); }
+// Dice are smaller — 7.5% of width instead of 10%
+function dieW() { return Math.floor(W() * 0.075); }
 function dieH() { return Math.floor(dieW() * 1.1); }
-
-// Spacing between dice — evenly distributed across board width
 function dieSpacing() { return Math.floor(W() / (BOARD_SLOTS + 1)); }
 
-// Y positions as fractions of screen height
-function aiDiceY()     { return Math.floor(H() * 0.08); }
-function playerDiceY() { return Math.floor(H() * 0.62); }
-function buttonY()     { return Math.floor(H() * 0.50); }
-function endTurnY()    { return Math.floor(H() * 0.85); }
-function playerHPY()   { return Math.floor(H() * 0.92); }
-function pouchY()      { return Math.floor(H() * 0.96); }
+// Y zones — AI top, player bottom, buttons in middle
+function aiDiceY()     { return Math.floor(H() * 0.06); }
+function playerDiceY() { return Math.floor(H() * 0.60); }
+
+// Buttons centered in middle band
+function buttonY()     { return Math.floor(H() * 0.48); }
+function endTurnY()    { return Math.floor(H() * 0.82); }
+
+// HP circle center top
+function hpCircleY()   { return Math.floor(H() * 0.26); }
+
+// Info labels bottom
+function playerHPY()   { return Math.floor(H() * 0.93); }
+function pouchY()      { return Math.floor(H() * 0.97); }
 function phaseY()      { return Math.floor(H() * 0.01); }
 function logY()        { return Math.floor(H() * 0.04); }
 
 // Button dimensions
-function btnW()  { return Math.floor(W() * 0.14); }
-function btnH()  { return Math.floor(H() * 0.06); }
-function btnFs() { return Math.max(11, Math.floor(W() * 0.013)); }
+function btnW()  { return Math.floor(W() * 0.13); }
+function btnH()  { return Math.floor(H() * 0.055); }
+function btnFs() { return Math.max(11, Math.floor(W() * 0.012)); }
 
+// Total width of 3 buttons + gaps, centered
+function buttonsStartX() {
+  const totalW = btnW() * 3 + Math.floor(W() * 0.02) * 2;
+  return Math.floor((W() - totalW) / 2);
+}
 
 // ============================================================
-// PERSISTENT UI ELEMENTS — rebuilt on resize
+// UI BUILD
 // ============================================================
 
-let uiRefs = {}; // holds all live UI text/button refs
+let uiRefs = {};
 
 function buildUI() {
   uiLayer.removeChildren();
   uiRefs = {};
 
-  // Phase label
-  const phaseLabel = makeText(state.phase || '', Math.max(11, Math.floor(W() * 0.013)), 0x888888);
+  // Phase label — top left
+  const phaseLabel = makeText('', Math.max(11, Math.floor(W() * 0.012)), 0x888888);
   phaseLabel.x = 16;
   phaseLabel.y = phaseY();
   uiLayer.addChild(phaseLabel);
   uiRefs.phaseLabel = phaseLabel;
 
   // Log label
-  const logLabel = makeText('', Math.max(10, Math.floor(W() * 0.011)), 0x555555);
+  const logLabel = makeText('', Math.max(10, Math.floor(W() * 0.010)), 0x555555);
   logLabel.x = 16;
   logLabel.y = logY();
   uiLayer.addChild(logLabel);
   uiRefs.logLabel = logLabel;
 
-  // Player HP
-  const playerHP = makeText('YOUR HP: ' + state.player.hp, Math.max(13, Math.floor(W() * 0.015)), 0xcc0000);
-  playerHP.x = 16;
-  playerHP.y = playerHPY();
-  uiLayer.addChild(playerHP);
-  uiRefs.playerHP = playerHP;
+  // Divider line
+  const divider = new PIXI.Graphics();
+  divider.lineStyle(1, 0x1a1a1a, 1);
+  divider.moveTo(0, H() * 0.44);
+  divider.lineTo(W(), H() * 0.44);
+  uiLayer.addChild(divider);
 
-  // AI HP
-  const aiHP = makeText('ENEMY HP: ' + state.ai.hp, Math.max(13, Math.floor(W() * 0.015)), 0x884400);
-  aiHP.x = W() - 200;
-  aiHP.y = 16;
-  uiLayer.addChild(aiHP);
-  uiRefs.aiHP = aiHP;
+  // Zone labels
+  const aiZone = makeText('ENEMY BOARD', Math.max(9, Math.floor(W() * 0.008)), 0x222222);
+  aiZone.x = 16;
+  aiZone.y = aiDiceY() + dieH() + 32;
+  uiLayer.addChild(aiZone);
 
-  // Pouch label
-  const pouchLabel = makeText('POUCH: ' + state.player.pouch.length + ' remaining', Math.max(10, Math.floor(W() * 0.010)), 0x444444);
+  const playerZone = makeText('YOUR BOARD', Math.max(9, Math.floor(W() * 0.008)), 0x222222);
+  playerZone.x = 16;
+  playerZone.y = playerDiceY() - 16;
+  uiLayer.addChild(playerZone);
+
+  // HP circles — center of board
+  buildHPDisplay();
+
+  // Reroll count — below buttons
+  const rerollLabel = makeText('Rerolls left: ' + state.rerollsLeft, Math.max(10, Math.floor(W() * 0.010)), 0x555555);
+  rerollLabel.anchor.set(0.5, 0);
+  rerollLabel.x = W() / 2;
+  rerollLabel.y = buttonY() + btnH() + 8;
+  uiLayer.addChild(rerollLabel);
+  uiRefs.rerollLabel = rerollLabel;
+
+  // Pouch label — bottom left
+  const pouchLabel = makeText('POUCH: ' + state.player.pouch.length + ' remaining', Math.max(10, Math.floor(W() * 0.009)), 0x444444);
   pouchLabel.x = 16;
   pouchLabel.y = pouchY();
   uiLayer.addChild(pouchLabel);
   uiRefs.pouchLabel = pouchLabel;
 
-  // Reroll count
-  const rerollLabel = makeText('Rerolls left: ' + state.rerollsLeft, Math.max(10, Math.floor(W() * 0.011)), 0x555555);
-  rerollLabel.x = W() * 0.5 - 60;
-  rerollLabel.y = buttonY() + btnH() + 8;
-  uiLayer.addChild(rerollLabel);
-  uiRefs.rerollLabel = rerollLabel;
+  // Buttons — evenly centered
+  const gap  = Math.floor(W() * 0.02);
+  const bx   = buttonsStartX();
 
-  // Divider line — separates AI side from player side
-  const divider = new PIXI.Graphics();
-  divider.lineStyle(1, 0x1a1a1a, 1);
-  divider.moveTo(0, H() * 0.45);
-  divider.lineTo(W(), H() * 0.45);
-  uiLayer.addChild(divider);
-
-  // AI zone label
-  const aiZone = makeText('ENEMY BOARD', Math.max(9, Math.floor(W() * 0.009)), 0x222222);
-  aiZone.x = 16;
-  aiZone.y = aiDiceY() + dieH() + 36;
-  uiLayer.addChild(aiZone);
-
-  // Player zone label
-  const playerZone = makeText('YOUR BOARD', Math.max(9, Math.floor(W() * 0.009)), 0x222222);
-  playerZone.x = 16;
-  playerZone.y = playerDiceY() - 18;
-  uiLayer.addChild(playerZone);
-
-  // ROLL ALL button
-  buildButton('ROLL ALL', W() * 0.30, buttonY(), () => {
+  buildButton('ROLL ALL', bx, buttonY(), () => {
     if (state.phase === 'ROLL' && state.turn === 'PLAYER') phaseRoll();
   });
-
-  // REROLL button
-  buildButton('REROLL', W() * 0.46, buttonY(), () => {
+  buildButton('REROLL', bx + btnW() + gap, buttonY(), () => {
     if (state.phase === 'REROLL' && state.turn === 'PLAYER' && state.rerollsLeft > 0) phaseReroll();
   });
-
-  // DONE button
-  buildButton('DONE', W() * 0.62, buttonY(), () => {
+  buildButton('DONE', bx + (btnW() + gap) * 2, buttonY(), () => {
     if (state.phase === 'REROLL' && state.turn === 'PLAYER') {
       state.phase = 'ACTION';
       unlockAllPlayerDice();
@@ -250,16 +210,68 @@ function buildUI() {
     }
   });
 
-  // END TURN button — centered, bigger
-  buildButton('END TURN', W() * 0.40, endTurnY(), () => {
+  // END TURN — centered, bigger, well below dice
+  const etW = Math.floor(btnW() * 1.3);
+  buildButton('END TURN', (W() - etW) / 2, endTurnY(), () => {
     if (state.phase === 'ACTION' && state.turn === 'PLAYER') phaseResolve();
   }, true);
 }
 
+function buildHPDisplay() {
+  const cx    = W() / 2;
+  const cy    = hpCircleY();
+  const r     = Math.floor(W() * 0.045);
+  const gap   = Math.floor(W() * 0.16);
+  const fs    = Math.max(14, Math.floor(r * 0.7));
+  const fsLbl = Math.max(9,  Math.floor(W() * 0.009));
+
+  // Enemy circle — left of center
+  const enemyCircle = new PIXI.Graphics();
+  enemyCircle.lineStyle(2, 0x884400, 1);
+  enemyCircle.beginFill(0x0a0a0a);
+  enemyCircle.drawCircle(cx - gap, cy, r);
+  enemyCircle.endFill();
+  uiLayer.addChild(enemyCircle);
+
+  const enemyLbl = makeText('ENEMY', fsLbl, 0x884400);
+  enemyLbl.anchor.set(0.5);
+  enemyLbl.x = cx - gap;
+  enemyLbl.y = cy - r - 14;
+  uiLayer.addChild(enemyLbl);
+
+  const aiHP = makeText(String(state.ai.hp), fs, 0x884400);
+  aiHP.anchor.set(0.5);
+  aiHP.x = cx - gap;
+  aiHP.y = cy;
+  uiLayer.addChild(aiHP);
+  uiRefs.aiHP = aiHP;
+
+  // Player circle — right of center
+  const playerCircle = new PIXI.Graphics();
+  playerCircle.lineStyle(2, 0xcc0000, 1);
+  playerCircle.beginFill(0x0a0a0a);
+  playerCircle.drawCircle(cx + gap, cy, r);
+  playerCircle.endFill();
+  uiLayer.addChild(playerCircle);
+
+  const playerLbl = makeText('YOU', fsLbl, 0xcc0000);
+  playerLbl.anchor.set(0.5);
+  playerLbl.x = cx + gap;
+  playerLbl.y = cy - r - 14;
+  uiLayer.addChild(playerLbl);
+
+  const playerHP = makeText(String(state.player.hp), fs, 0xcc0000);
+  playerHP.anchor.set(0.5);
+  playerHP.x = cx + gap;
+  playerHP.y = cy;
+  uiLayer.addChild(playerHP);
+  uiRefs.playerHP = playerHP;
+}
+
 function buildButton(label, x, y, onClick, big = false) {
-  const w   = big ? btnW() * 1.2 : btnW();
-  const h   = btnH();
-  const fs  = big ? btnFs() + 2 : btnFs();
+  const w  = big ? Math.floor(btnW() * 1.3) : btnW();
+  const h  = btnH();
+  const fs = big ? btnFs() + 2 : btnFs();
   const btn = new PIXI.Container();
   btn.x = x;
   btn.y = y;
@@ -288,28 +300,27 @@ function setPhaseLabel(txt) { if (uiRefs.phaseLabel) uiRefs.phaseLabel.text = tx
 function log(txt)            { if (uiRefs.logLabel)   uiRefs.logLabel.text   = txt; }
 
 function refreshHP() {
-  if (uiRefs.playerHP) uiRefs.playerHP.text = 'YOUR HP: '   + state.player.hp;
-  if (uiRefs.aiHP)     uiRefs.aiHP.text     = 'ENEMY HP: '  + state.ai.hp;
+  if (uiRefs.playerHP) uiRefs.playerHP.text = String(state.player.hp);
+  if (uiRefs.aiHP)     uiRefs.aiHP.text     = String(state.ai.hp);
 }
 
 function refreshPouchLabel() {
-  if (uiRefs.pouchLabel)  uiRefs.pouchLabel.text  = 'POUCH: ' + state.player.pouch.length + ' remaining';
+  if (uiRefs.pouchLabel) uiRefs.pouchLabel.text = 'POUCH: ' + state.player.pouch.length + ' remaining';
 }
 
 function refreshRerollLabel() {
   if (uiRefs.rerollLabel) uiRefs.rerollLabel.text = 'Rerolls left: ' + state.rerollsLeft;
 }
 
-
 // ============================================================
 // DIE FACTORY
 // ============================================================
 
 function buildDie(template) {
-  const allFaces   = [1, 2, 3, 4, 5, 6];
+  const allFaces    = [1, 2, 3, 4, 5, 6];
   const startBlanks = RARITY_BLANKS[template.rarity] ?? 3;
-  const blanked    = [];
-  const facesCopy  = [...allFaces];
+  const blanked     = [];
+  const facesCopy   = [...allFaces];
 
   for (let i = 0; i < startBlanks; i++) {
     const idx = Math.floor(Math.random() * facesCopy.length);
@@ -339,7 +350,6 @@ function buildDie(template) {
   };
 }
 
-
 // ============================================================
 // POUCH + BOARD SETUP
 // ============================================================
@@ -363,33 +373,32 @@ function drawFromPouch(who) {
   who.board[slot] = who.pouch.shift();
 }
 
-
 // ============================================================
-// DIE RENDERER — scales to current dieW/dieH
+// DIE RENDERER
 // ============================================================
 
 function renderDie(die, x, y, isPlayer) {
   const layer = isPlayer ? playerLayer : aiLayer;
   if (die.container) layer.removeChild(die.container);
 
-  const W2 = dieW();
-  const H2 = dieH();
-  const fs  = Math.max(14, Math.floor(W2 * 0.28));
-  const fsS = Math.max(7,  Math.floor(W2 * 0.10));
+  const W2  = dieW();
+  const H2  = dieH();
+  const fs  = Math.max(12, Math.floor(W2 * 0.28));
+  const fsS = Math.max(6,  Math.floor(W2 * 0.10));
 
   const container  = new PIXI.Container();
   const graphics   = new PIXI.Graphics();
   const valueLabel = makeText('', fs, 0xffffff);
   const nameLabel  = new PIXI.Text(die.name, {
-    fontFamily: 'Share Tech Mono, monospace',
-    fontSize:   Math.max(7, Math.floor(W2 * 0.09)),
-    fill:       0x888888,
-    wordWrap:   true,
+    fontFamily:    'Share Tech Mono, monospace',
+    fontSize:      Math.max(6, Math.floor(W2 * 0.09)),
+    fill:          0x888888,
+    wordWrap:      true,
     wordWrapWidth: W2 + 8,
-    align:      'center',
+    align:         'center',
   });
-  const keyLabel    = makeText(die.keyword, fsS, 0xffcc00);
-  const rarityLabel = makeText(die.rarity.toUpperCase(), Math.max(6, Math.floor(W2 * 0.08)), RARITY_COLORS[die.rarity] || 0x555555);
+  const keyLabel    = makeText(die.keyword,            fsS, 0xffcc00);
+  const rarityLabel = makeText(die.rarity.toUpperCase(), Math.max(5, Math.floor(W2 * 0.08)), RARITY_COLORS[die.rarity] || 0x555555);
 
   container.x = x;
   container.y = y;
@@ -409,11 +418,11 @@ function renderDie(die, x, y, isPlayer) {
 
   keyLabel.anchor.set(0.5, 0);
   keyLabel.x = W2 / 2;
-  keyLabel.y = H2 + 4 + Math.floor(W2 * 0.13);
+  keyLabel.y = H2 + 4 + Math.floor(W2 * 0.14);
 
   rarityLabel.anchor.set(0.5, 0);
   rarityLabel.x = W2 / 2;
-  rarityLabel.y = H2 + 4 + Math.floor(W2 * 0.13) * 2;
+  rarityLabel.y = H2 + 4 + Math.floor(W2 * 0.14) * 2;
 
   container.addChild(graphics);
   container.addChild(valueLabel);
@@ -449,17 +458,16 @@ function drawDieGraphic(die) {
   die.graphics.endFill();
 
   if (dead) {
-    die.valueLabel.text            = '✕';
-    die.valueLabel.style.fill      = 0x333333;
+    die.valueLabel.text       = '✕';
+    die.valueLabel.style.fill = 0x333333;
   } else if (isBlank) {
-    die.valueLabel.text            = '—';
-    die.valueLabel.style.fill      = 0x2a2a2a;
+    die.valueLabel.text       = '—';
+    die.valueLabel.style.fill = 0x2a2a2a;
   } else {
-    die.valueLabel.text            = String(die.currentFace);
-    die.valueLabel.style.fill      = 0xffffff;
+    die.valueLabel.text       = String(die.currentFace);
+    die.valueLabel.style.fill = 0xffffff;
   }
 }
-
 
 // ============================================================
 // BOARD RENDERER
@@ -472,14 +480,12 @@ function renderBoard() {
   const spacing = dieSpacing();
   const halfDie = dieW() / 2;
 
-  // AI board — top zone
   state.ai.board.forEach((die, i) => {
     if (!die) return;
     const x = spacing * (i + 1) - halfDie;
     renderDie(die, x, aiDiceY(), false);
   });
 
-  // Player board — bottom zone
   state.player.board.forEach((die, i) => {
     if (!die) return;
     const x = spacing * (i + 1) - halfDie;
@@ -488,9 +494,8 @@ function renderBoard() {
   });
 }
 
-
 // ============================================================
-// FULL REDRAW — called on resize and state changes
+// FULL REDRAW
 // ============================================================
 
 function fullRedraw() {
@@ -500,7 +505,6 @@ function fullRedraw() {
   refreshPouchLabel();
   refreshRerollLabel();
 
-  // Restore phase label text
   const phaseTexts = {
     ROLL:    'YOUR TURN — hit ROLL ALL to begin',
     REROLL:  'REROLL — click dice to lock, then REROLL or DONE',
@@ -512,18 +516,13 @@ function fullRedraw() {
   setPhaseLabel(phaseTexts[state.phase] || '');
 }
 
-// Resize handler — fires whenever window changes size
 window.addEventListener('resize', () => {
-  // PixiJS resizeTo:window handles the canvas resize automatically
-  // We just need to rebuild layout after a short debounce
   clearTimeout(window._resizeTimer);
   window._resizeTimer = setTimeout(() => {
     fullRedraw();
-    // If game over screen was showing, redraw it
     if (state.phase === 'OVER') showEndScreen(state.winner);
   }, 100);
 });
-
 
 // ============================================================
 // KEYWORD: FRENZIED
@@ -536,7 +535,6 @@ function applyFrenzied(die, target) {
   die.currentFace = null;
   drawDieGraphic(die);
 }
-
 
 // ============================================================
 // PHASE: ROLL
@@ -555,11 +553,10 @@ function phaseRoll() {
     if (++ticks >= 14) {
       clearInterval(interval);
 
-      // Frenzied triggers immediately on roll
       state.player.board.forEach(d => {
         if (d && !d.isDead() && d.keyword === 'Frenzied' && d.currentFace && !d.blanked.includes(d.currentFace)) {
           applyFrenzied(d, 'AI');
-          d.locked = true; // spend it — can't reroll a fired Frenzied die
+          d.locked = true;
         }
       });
 
@@ -568,7 +565,7 @@ function phaseRoll() {
       log('Lock dice you want to keep. Unlocked dice will reroll.');
       refreshRerollLabel();
 
-      // Attach lock listeners directly — do NOT call renderBoard here
+      // Attach lock listeners — do NOT call renderBoard here
       state.player.board.forEach(die => {
         if (!die || die.isDead() || !die.container) return;
         die.container.removeAllListeners('pointerdown');
@@ -581,7 +578,6 @@ function phaseRoll() {
     }
   }, 60);
 }
-
 
 // ============================================================
 // PHASE: REROLL
@@ -617,7 +613,6 @@ function phaseReroll() {
   }, 60);
 }
 
-
 // ============================================================
 // PHASE: ACTION
 // ============================================================
@@ -630,11 +625,33 @@ function handlePlayerDieClick(die) {
     return;
   }
 
-  // Anchor check
-  const aiHasAnchor = state.ai.board.some(d => d && !d.isDead() && d.keyword === 'Anchor');
-  if (aiHasAnchor && die.keyword !== 'Piercing') {
-    log('Enemy has ANCHOR — use a Piercing die to bypass it first.');
+  const aiAnchorDie = state.ai.board.find(d => d && !d.isDead() && d.keyword === 'Anchor');
+
+  // Anchor logic — must target Anchor die first unless Piercing
+  if (aiAnchorDie && die.keyword !== 'Piercing') {
+    // Deal damage to Anchor die (blank a face) instead of player HP
+    blankFace(aiAnchorDie);
+    log(die.name + ' hits ANCHOR — blanked a face on ' + aiAnchorDie.name + '!');
+    die.currentFace = null;
+    drawDieGraphic(die);
     return;
+  }
+
+  // Decay — blank a face on target in addition to damage
+  if (die.keyword === 'Decay') {
+    const target = getStrongestAIDie();
+    if (target) {
+      blankFace(target);
+      log(die.name + ' DECAY — blanked a face on ' + target.name + '!');
+    }
+  }
+
+  // Leech — heal player on damage dealt
+  if (die.keyword === 'Leech') {
+    const heal = Math.max(1, Math.floor(die.currentFace / 2));
+    state.player.hp = Math.min(STARTING_HP, state.player.hp + heal);
+    refreshHP();
+    log(die.name + ' LEECH — healed ' + heal + '!');
   }
 
   dealDamage('AI', die.currentFace);
@@ -642,7 +659,6 @@ function handlePlayerDieClick(die) {
   die.currentFace = null;
   drawDieGraphic(die);
 }
-
 
 // ============================================================
 // PHASE: RESOLVE
@@ -655,7 +671,6 @@ function phaseResolve() {
   if (checkWin()) return;
   setTimeout(() => { state.turn = 'AI'; aiTurn(); }, 800);
 }
-
 
 // ============================================================
 // BOARD CLEANUP
@@ -673,18 +688,25 @@ function cleanBoard(who) {
       log((who === 'player' ? 'Drew: ' : 'Enemy drew: ') + next.name);
     }
   });
+
+  // Win by empty board + empty pouch
+  const allDead = side.board.every(d => d === null);
+  if (allDead && side.pouch.length === 0) {
+    showEndScreen(who === 'player' ? 'AI' : 'PLAYER');
+    return;
+  }
+
   renderBoard();
   refreshPouchLabel();
 }
-
 
 // ============================================================
 // DAMAGE
 // ============================================================
 
 function dealDamage(target, amount) {
-  if (target === 'AI')     state.ai.hp     = Math.max(0, state.ai.hp     - amount);
-  else                     state.player.hp = Math.max(0, state.player.hp - amount);
+  if (target === 'AI') state.ai.hp     = Math.max(0, state.ai.hp     - amount);
+  else                 state.player.hp = Math.max(0, state.player.hp - amount);
   refreshHP();
 }
 
@@ -697,7 +719,6 @@ function blankFace(die) {
   drawDieGraphic(die);
 }
 
-
 // ============================================================
 // WIN CHECK
 // ============================================================
@@ -705,6 +726,14 @@ function blankFace(die) {
 function checkWin() {
   if (state.ai.hp     <= 0) { showEndScreen('PLAYER'); return true; }
   if (state.player.hp <= 0) { showEndScreen('AI');     return true; }
+
+  // Win by blanking all enemy dice
+  const aiAllDead = state.ai.board.every(d => !d || d.isDead()) && state.ai.pouch.length === 0;
+  if (aiAllDead) { showEndScreen('PLAYER'); return true; }
+
+  const playerAllDead = state.player.board.every(d => !d || d.isDead()) && state.player.pouch.length === 0;
+  if (playerAllDead) { showEndScreen('AI'); return true; }
+
   return false;
 }
 
@@ -723,16 +752,16 @@ function showEndScreen(winner) {
   const fs  = Math.max(40, Math.floor(W() * 0.07));
 
   const winText = new PIXI.Text(msg, {
-    fontFamily: 'Share Tech Mono, monospace',
-    fontSize:   fs,
-    fill:       col,
+    fontFamily:    'Share Tech Mono, monospace',
+    fontSize:      fs,
+    fill:          col,
     letterSpacing: 8,
   });
   winText.anchor.set(0.5);
   winText.x = W() / 2;
   winText.y = H() / 2;
 
-  const sub = makeText('refresh to play again', Math.max(12, Math.floor(W() * 0.014)), 0x444444);
+  const sub = makeText('refresh to play again', Math.max(12, Math.floor(W() * 0.013)), 0x444444);
   sub.anchor.set(0.5);
   sub.x = W() / 2;
   sub.y = H() / 2 + fs + 16;
@@ -741,7 +770,6 @@ function showEndScreen(winner) {
   overlayLayer.addChild(winText);
   overlayLayer.addChild(sub);
 }
-
 
 // ============================================================
 // AI TURN
@@ -765,10 +793,17 @@ function aiTurn() {
 }
 
 function aiAct() {
-  const usable         = state.ai.board.filter(d => d && !d.isDead() && d.currentFace && !d.blanked.includes(d.currentFace));
-  const playerHasAnchor = state.player.board.some(d => d && !d.isDead() && d.keyword === 'Anchor');
+  const usable          = state.ai.board.filter(d => d && !d.isDead() && d.currentFace && !d.blanked.includes(d.currentFace));
+  const playerAnchorDie = state.player.board.find(d => d && !d.isDead() && d.keyword === 'Anchor');
 
   usable.forEach(die => {
+    // Must hit Anchor die first unless Piercing
+    if (playerAnchorDie && die.keyword !== 'Piercing') {
+      blankFace(playerAnchorDie);
+      log('Enemy ' + die.name + ' hits your ANCHOR — blanked a face on ' + playerAnchorDie.name + '!');
+      die.currentFace = null; drawDieGraphic(die); return;
+    }
+
     if (die.keyword === 'Decay') {
       const target = getStrongestPlayerDie();
       if (target) {
@@ -778,24 +813,19 @@ function aiAct() {
         die.currentFace = null; drawDieGraphic(die); return;
       }
     }
-    if (die.keyword === 'Leech' && state.ai.hp < STARTING_HP) {
-      const heal = Math.floor(die.currentFace / 2);
+
+    if (die.keyword === 'Leech') {
+      const heal = Math.max(1, Math.floor(die.currentFace / 2));
       dealDamage('PLAYER', die.currentFace);
-      state.ai.hp = Math.min(STARTING_HP + 5, state.ai.hp + heal);
+      state.ai.hp = Math.min(STARTING_HP, state.ai.hp + heal);
       refreshHP();
       log('Enemy LEECH — dealt damage, healed ' + heal + '!');
       die.currentFace = null; drawDieGraphic(die); return;
     }
-    if (die.keyword === 'Piercing' && playerHasAnchor) {
-      dealDamage('PLAYER', die.currentFace);
-      log('Enemy PIERCING — bypassed your Anchor for ' + die.currentFace + '!');
-      die.currentFace = null; drawDieGraphic(die); return;
-    }
-    if (!playerHasAnchor || die.keyword === 'Piercing') {
-      dealDamage('PLAYER', die.currentFace);
-      log('Enemy ' + die.name + ' dealt ' + die.currentFace + ' damage.');
-      die.currentFace = null; drawDieGraphic(die);
-    }
+
+    dealDamage('PLAYER', die.currentFace);
+    log('Enemy ' + die.name + ' dealt ' + die.currentFace + ' damage.');
+    die.currentFace = null; drawDieGraphic(die);
   });
 
   setTimeout(() => {
@@ -820,6 +850,15 @@ function getStrongestPlayerDie() {
   return best;
 }
 
+function getStrongestAIDie() {
+  let best = null, bestCount = -1;
+  state.ai.board.forEach(d => {
+    if (!d || d.isDead()) return;
+    const c = d.activefaces().length;
+    if (c > bestCount) { best = d; bestCount = c; }
+  });
+  return best;
+}
 
 // ============================================================
 // INIT
