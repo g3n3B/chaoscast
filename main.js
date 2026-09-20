@@ -103,21 +103,21 @@ function dieH() { return Math.floor(dieW() * 1.1); }
 function dieSpacing() { return Math.floor(W() / (BOARD_SLOTS + 1)); }
 
 // Y zones — AI top, player bottom, buttons in middle
-function aiDiceY()     { return Math.floor(H() * 0.06); }
-function playerDiceY() { return Math.floor(H() * 0.60); }
+function aiDiceY()     { return Math.floor(H() * 0.04); }
+function playerDiceY() { return Math.floor(H() * 0.58); }
 
 // Buttons centered in middle band
-function buttonY()     { return Math.floor(H() * 0.48); }
-function endTurnY()    { return Math.floor(H() * 0.82); }
+function buttonY()     { return Math.floor(H() * 0.46); }
+function endTurnY()    { return Math.floor(H() * 0.80); }
 
-// HP circle center top
-function hpCircleY()   { return Math.floor(H() * 0.26); }
+// HP circles — enemy top center, player bottom center
+function enemyHPCircleY()  { return Math.floor(H() * 0.26); }
+function playerHPCircleY() { return Math.floor(H() * 0.72); }
 
 // Info labels bottom
-function playerHPY()   { return Math.floor(H() * 0.93); }
-function pouchY()      { return Math.floor(H() * 0.97); }
+function pouchY()      { return Math.floor(H() * 0.96); }
 function phaseY()      { return Math.floor(H() * 0.01); }
-function logY()        { return Math.floor(H() * 0.04); }
+function logY()        { return Math.floor(H() * 0.035); }
 
 // Button dimensions
 function btnW()  { return Math.floor(W() * 0.13); }
@@ -175,17 +175,18 @@ function buildUI() {
   // HP circles — center of board
   buildHPDisplay();
 
-  // Reroll count — below buttons
+  // Reroll count — below buttons, centered
   const rerollLabel = makeText('Rerolls left: ' + state.rerollsLeft, Math.max(10, Math.floor(W() * 0.010)), 0x555555);
   rerollLabel.anchor.set(0.5, 0);
   rerollLabel.x = W() / 2;
-  rerollLabel.y = buttonY() + btnH() + 8;
+  rerollLabel.y = buttonY() + btnH() + 6;
   uiLayer.addChild(rerollLabel);
   uiRefs.rerollLabel = rerollLabel;
 
-  // Pouch label — bottom left
+  // Pouch label — bottom right
   const pouchLabel = makeText('POUCH: ' + state.player.pouch.length + ' remaining', Math.max(10, Math.floor(W() * 0.009)), 0x444444);
-  pouchLabel.x = 16;
+  pouchLabel.anchor.set(1, 0);
+  pouchLabel.x = W() - 16;
   pouchLabel.y = pouchY();
   uiLayer.addChild(pouchLabel);
   uiRefs.pouchLabel = pouchLabel;
@@ -219,51 +220,51 @@ function buildUI() {
 
 function buildHPDisplay() {
   const cx    = W() / 2;
-  const cy    = hpCircleY();
-  const r     = Math.floor(W() * 0.045);
-  const gap   = Math.floor(W() * 0.16);
+  const r     = Math.floor(W() * 0.04);
   const fs    = Math.max(14, Math.floor(r * 0.7));
   const fsLbl = Math.max(9,  Math.floor(W() * 0.009));
 
-  // Enemy circle — left of center
+  // Enemy circle — top center, just below enemy dice
+  const eCY = enemyHPCircleY();
   const enemyCircle = new PIXI.Graphics();
   enemyCircle.lineStyle(2, 0x884400, 1);
   enemyCircle.beginFill(0x0a0a0a);
-  enemyCircle.drawCircle(cx - gap, cy, r);
+  enemyCircle.drawCircle(cx, eCY, r);
   enemyCircle.endFill();
   uiLayer.addChild(enemyCircle);
 
   const enemyLbl = makeText('ENEMY', fsLbl, 0x884400);
   enemyLbl.anchor.set(0.5);
-  enemyLbl.x = cx - gap;
-  enemyLbl.y = cy - r - 14;
+  enemyLbl.x = cx;
+  enemyLbl.y = eCY - r - 14;
   uiLayer.addChild(enemyLbl);
 
   const aiHP = makeText(String(state.ai.hp), fs, 0x884400);
   aiHP.anchor.set(0.5);
-  aiHP.x = cx - gap;
-  aiHP.y = cy;
+  aiHP.x = cx;
+  aiHP.y = eCY;
   uiLayer.addChild(aiHP);
   uiRefs.aiHP = aiHP;
 
-  // Player circle — right of center
+  // Player circle — bottom center, just above player dice
+  const pCY = playerHPCircleY();
   const playerCircle = new PIXI.Graphics();
   playerCircle.lineStyle(2, 0xcc0000, 1);
   playerCircle.beginFill(0x0a0a0a);
-  playerCircle.drawCircle(cx + gap, cy, r);
+  playerCircle.drawCircle(cx, pCY, r);
   playerCircle.endFill();
   uiLayer.addChild(playerCircle);
 
   const playerLbl = makeText('YOU', fsLbl, 0xcc0000);
   playerLbl.anchor.set(0.5);
-  playerLbl.x = cx + gap;
-  playerLbl.y = cy - r - 14;
+  playerLbl.x = cx;
+  playerLbl.y = pCY - r - 14;
   uiLayer.addChild(playerLbl);
 
   const playerHP = makeText(String(state.player.hp), fs, 0xcc0000);
   playerHP.anchor.set(0.5);
-  playerHP.x = cx + gap;
-  playerHP.y = cy;
+  playerHP.x = cx;
+  playerHP.y = pCY;
   uiLayer.addChild(playerHP);
   uiRefs.playerHP = playerHP;
 }
